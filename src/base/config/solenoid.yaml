@@ -1,0 +1,11 @@
+/**/solenoid:
+  ros__parameters:
+    # 이전 solenoid_node.py 확인값이다.
+    gpio_pin: 23
+    gpiochip: 4
+    # 2026-09-01 실물에서 UI의 잠금/해제와 실제 걸쇠 동작이 반대로
+    # 확인되어 출력 극성을 반전했다. false이면 잠금=GPIO LOW,
+    # 해제=GPIO HIGH로 출력한다.
+    active_low: false
+    # 해제 명령 후 이 시간이 지나면 안전을 위해 자동으로 다시 잠근다.
+    release_timeout_s: 5.0

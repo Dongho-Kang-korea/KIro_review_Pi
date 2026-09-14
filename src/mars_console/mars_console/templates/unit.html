@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ name }} — MARS</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 20px; background: #0e1116; color: #e6edf3;
+         font: 15px/1.5 system-ui, "Noto Sans KR", sans-serif; }
+  a { color: #4b93ff; }
+  header { display: flex; align-items: center; gap: 16px; margin-bottom: 18px;
+           flex-wrap: wrap; }
+  h1 { margin: 0; font-size: 22px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: #6e7681;
+         display: inline-block; }
+  .dot.on { background: #3fb950; box-shadow: 0 0 8px #3fb95088; }
+  .layout { display: grid; gap: 18px; grid-template-columns: minmax(320px, 1.2fr) 1fr;
+            align-items: start; }
+  @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
+  .panel { border: 1px solid #2a313c; border-radius: 12px; background: #161b22;
+           padding: 16px; }
+  .panel h2 { margin: 0 0 12px; font-size: 13px; text-transform: uppercase;
+              letter-spacing: .08em; color: #8b949e; font-weight: 600; }
+  img.cam { width: 100%; border-radius: 8px; background: #000; display: block;
+            aspect-ratio: 4/3; object-fit: contain; }
+  .modes { display: flex; gap: 8px; flex-wrap: wrap; }
+  button { font: inherit; padding: 10px 18px; border-radius: 8px; cursor: pointer;
+           border: 1px solid #2a313c; background: #21262d; color: #e6edf3; }
+  button:hover:not(:disabled) { border-color: #4b93ff; }
+  button:disabled { opacity: .38; cursor: not-allowed; }
+  button.active { background: #1f6feb; border-color: #1f6feb; font-weight: 600; }
+  button.stop { background: #8e1519; border-color: #b62324; font-weight: 600; }
+  .row { display: flex; justify-content: space-between; padding: 4px 0;
+         border-bottom: 1px solid #21262d; font-size: 14px; }
+  .row:last-child { border-bottom: 0; }
+  .row span { color: #8b949e; }
+  .pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+         max-width: 260px; margin-top: 6px; }
+  .pad button { padding: 16px 0; }
+  .hint { color: #6e7681; font-size: 12px; margin-top: 10px; }
+  .warn { color: #d29922; font-size: 13px; margin-top: 8px; }
+  .mission { display: flex; gap: 8px; flex-wrap: wrap; }
+  .mission button { padding: 8px 14px; font-size: 14px; }
+  .slider-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .slider-row label { color: #8b949e; font-size: 13px; white-space: nowrap; }
+  .slider-row input[type=range] { flex: 1; accent-color: #1f6feb; }
+  .slider-row span { min-width: 46px; text-align: right; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body data-unit="{{ unit }}">
+  <header>
+    <a href="/">← 호기 선택</a>
+    <h1><span class="dot" id="dot"></span> {{ name }}</h1>
+    <span id="headline" style="color:#8b949e"></span>
+  </header>
+
+  <div class="layout">
+    <div>
+      <div class="panel" style="margin-bottom:18px">
+        <h2>카메라</h2>
+        <img class="cam" id="cam" src="/api/unit/{{ unit }}/camera.mjpg" alt="camera">
+        <div class="modes" style="margin-top:10px" id="camtools"></div>
+        <div class="hint" id="axeshint" style="display:none">
+          마커 위에 3축 좌표계를 그려 pose 값을 눈으로 확인합니다.
+          영상 처리가 조금 더 걸릴 수 있어 기본은 꺼짐입니다.
+        </div>
+      </div>
+      <div class="panel">
+        <h2>수동 주행</h2>
+        <div class="slider-row">
+          <label for="speedSlider">속도</label>
+          <input type="range" id="speedSlider" min="20" max="100" step="5" value="60">
+          <span id="speedValue">60%</span>
+        </div>
+        <div class="pad">
+          <div></div>
+          <button data-drive="1,0">▲</button>
+          <div></div>
+          <button data-drive="0,1">◀</button>
+          <button data-drive="0,0">■</button>
+          <button data-drive="0,-1">▶</button>
+          <div></div>
+          <button data-drive="-1,0">▼</button>
+          <div></div>
+        </div>
+        <div class="hint">
+          버튼을 누르고 있는 동안만 움직입니다. 키보드 W/A/S/D 와 방향키도 됩니다.<br>
+          손을 떼거나 0.5초 안에 입력이 없으면 정지합니다.
+        </div>
+        <div class="warn" id="manualwarn"></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel" style="margin-bottom:18px" id="rollerpanel">
+        <h2>컨베이어(롤러) 수동 조작</h2>
+        <div class="slider-row">
+          <label for="rollerSlider">역방향 ← → 정방향</label>
+          <input type="range" id="rollerSlider" min="-100" max="100" step="5" value="0">
+          <span id="rollerValue">0%</span>
+        </div>
+        <div class="modes">
+          <button data-roller="-1">◀ 역방향</button>
+          <button data-roller="0">■ 정지</button>
+          <button data-roller="1">정방향 ▶</button>
+        </div>
+        <div class="hint">주행 모드와 무관하게 동작합니다. 슬라이더나 버튼을
+          누르면 그 값이 계속 유지되고, 자동 미션(적재)이 시작되면 자동
+          쪽이 우선합니다.</div>
+        <div class="warn" id="rollerwarn"></div>
+      </div>
+
+      <div class="panel" style="margin-bottom:18px" id="solenoidpanel">
+        <h2>솔레노이드 수동 조작</h2>
+        <div class="modes">
+          <button id="solenoidLockBtn">잠금</button>
+          <button id="solenoidUnlockBtn">해제</button>
+        </div>
+        <div class="hint">자동 결합이 잠그는 중(locking 단계)이 아니면
+          바로 반영됩니다.</div>
+        <div class="warn" id="solenoidwarn"></div>
+      </div>
+
+      <div class="panel" style="margin-bottom:18px" id="rcpanel">
+        <h2>조종 방식</h2>
+        <div class="modes" id="rctoggle"></div>
+        <div class="hint">웹/RC 둘 중 하나가 항상 전권을 갖습니다(TODO.md
+          21번). 웹으로 돌리면 RC 입력을 완전히 무시하고 웹이 주행/모드/
+          솔레노이드/컨베이어를 전부 조종합니다. RC로 켜면 반대로 웹의
+          주행/모드/솔레노이드/컨베이어 조작이 전부 막히고(아래 각 패널이
+          잠깁니다) 1호기 CH10 스위치까지 포함해 RC가 전부 조종합니다 —
+          RC로 바뀌는 값은 계속 이 화면에 그대로 반영됩니다.</div>
+      </div>
+
+      <div class="panel" style="margin-bottom:18px">
+        <h2>모드</h2>
+        <div class="modes" id="modes"></div>
+        <div class="warn" id="modewarn"></div>
+      </div>
+
+      <div class="panel" id="missionpanel" style="margin-bottom:18px; display:none">
+        <h2>미션 명령 (자동)</h2>
+        <div class="mission" id="mission"></div>
+        <div class="hint">자동 모드에서만 전달됩니다. 추종 모드에서는 1호기 명령이 우선합니다.</div>
+      </div>
+
+      <div class="panel" style="margin-bottom:18px" id="estoppanel">
+        <h2>안전</h2>
+        <div class="modes">
+          <button class="stop" onclick="post('estop', {stop:true})">비상 정지</button>
+          <button onclick="post('estop', {stop:false})">정지 해제</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>상태</h2>
+        <div id="status"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const UNIT = document.body.dataset.unit;
+const LABEL = { manual: '수동', auto: '자동', follow: '추종', rc: '조종기', idle: '대기' };
+let state = {}, held = null, rollerHeld = 0;
+
+// RC가 전권을 쥐고 있는가 — 서버(console.py의 rc_owns())가 stale_seconds
+// 안의 최신 rc/status.enabled로만 판단한 값을 그대로 쓴다. state.rc_enabled
+// 를 직접 쓰지 않는 이유: rc_bridge가 죽어 피드백이 끊겨도 rc_enabled는
+// 마지막 값에 머물 수 있어, 잠금이 영구 고착될 위험이 있다(TODO.md 21번).
+function rcOwns() { return !!state.rc_owns; }
+
+async function post(path, body) {
+  const res = await fetch(`/api/unit/${UNIT}/${path}`, {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body || {})
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    document.getElementById('modewarn').textContent = data.error || '요청 실패';
+    setTimeout(() => { document.getElementById('modewarn').textContent = ''; }, 3000);
+  }
+  return res.ok;
+}
+
+// --- 수동 주행: 누르고 있는 동안 20Hz 로 보낸다. 슬라이더는 버튼/키보드
+// 기본 배율(선속도 0.20, 각속도 0.20)에 곱하는 배율이다 — 서버 쪽
+// max_linear/max_angular로 최종 한 번 더 깎인다.
+let speedScale = 0.6;
+const speedSlider = document.getElementById('speedSlider');
+const speedValue = document.getElementById('speedValue');
+speedSlider.oninput = () => {
+  speedScale = Number(speedSlider.value) / 100;
+  speedValue.textContent = `${speedSlider.value}%`;
+  if (held) drive(held._l * speedScale, held._a * speedScale);
+};
+
+function drive(l, a) {
+  if (rcOwns()) return;
+  held = {linear: l * speedScale, angular: a * speedScale, _l: l, _a: a};
+}
+function release() {
+  held = null;
+  if (rcOwns()) return;
+  post('drive', {linear: 0, angular: 0});
+}
+
+setInterval(() => {
+  if (!held || rcOwns()) return;
+  post('drive', {linear: held.linear, angular: held.angular});
+}, 50);
+
+document.querySelectorAll('[data-drive]').forEach(btn => {
+  const [l, a] = btn.dataset.drive.split(',').map(Number);
+  const start = e => { e.preventDefault(); drive(l * 0.20, a * 0.20); };
+  btn.addEventListener('mousedown', start);
+  btn.addEventListener('touchstart', start, {passive: false});
+  ['mouseup', 'mouseleave', 'touchend', 'touchcancel']
+    .forEach(ev => btn.addEventListener(ev, release));
+});
+
+// --- 컨베이어(롤러) 수동 조작: 슬라이더나 버튼으로 값을 정하면 그 값이
+// 유지되고, 주행과 비슷한 주기로 계속 재발행한다(끊기면 cargo_load.py
+// 쪽에서 timeout으로 0이 된다).
+const rollerSlider = document.getElementById('rollerSlider');
+const rollerValue = document.getElementById('rollerValue');
+function setRoller(value) {
+  if (rcOwns()) return;
+  rollerHeld = Math.max(-1, Math.min(1, value));
+  rollerSlider.value = Math.round(rollerHeld * 100);
+  rollerValue.textContent = `${rollerSlider.value}%`;
+  post('roller', {value: rollerHeld});
+}
+rollerSlider.oninput = () => setRoller(Number(rollerSlider.value) / 100);
+document.querySelectorAll('[data-roller]').forEach(btn => {
+  btn.onclick = () => setRoller(Number(btn.dataset.roller) * 0.6);
+});
+setInterval(() => {
+  if (state.has_roller && !rcOwns()) post('roller', {value: rollerHeld});
+}, 150);
+
+document.getElementById('solenoidLockBtn').onclick = () => { if (!rcOwns()) post('solenoid', {lock: true}); };
+document.getElementById('solenoidUnlockBtn').onclick = () => { if (!rcOwns()) post('solenoid', {lock: false}); };
+
+const KEYS = {
+  w: [1, 0], ArrowUp: [1, 0], s: [-1, 0], ArrowDown: [-1, 0],
+  a: [0, 1], ArrowLeft: [0, 1], d: [0, -1], ArrowRight: [0, -1],
+};
+addEventListener('keydown', e => {
+  const key = KEYS[e.key];
+  if (!key || e.repeat || rcOwns()) return;
+  e.preventDefault();
+  drive(key[0] * 0.20, key[1] * 0.20);
+});
+addEventListener('keyup', e => { if (KEYS[e.key]) release(); });
+addEventListener('blur', release);
+
+// --- 화면 갱신 ---
+function renderModes() {
+  // RC가 전권을 쥐고 있으면 웹에서 모드를 바꿀 수 없다 — 서버(api_mode)도
+  // 같은 기준(rc_owns)으로 거부하므로 여기 UI 잠금은 그걸 미리 보여주는
+  // 역할일 뿐이다(TODO.md 21번).
+  const rcOwned = rcOwns();
+  document.getElementById('modes').innerHTML = state.modes.map(m => {
+    const locked = (m === 'follow' && !state.follow_available) || rcOwned;
+    return `<button data-mode="${m}" ${locked ? 'disabled' : ''}
+              class="${state.mode === m ? 'active' : ''}">${LABEL[m] || m}</button>`;
+  }).join('') + `<button data-mode="idle" ${rcOwned ? 'disabled' : ''}
+      class="${state.mode === 'idle' ? 'active' : ''}">대기</button>`;
+
+  document.querySelectorAll('[data-mode]').forEach(btn => {
+    btn.onclick = () => post('mode', {mode: btn.dataset.mode});
+  });
+
+  document.getElementById('modewarn').textContent = rcOwned
+    ? 'RC가 조종 중입니다 — 웹에서 바꾸려면 먼저 "조종 방식"을 웹으로 돌리세요.'
+    : (state.modes.includes('follow') && !state.follow_available)
+      ? '1호기 /fleet/state 가 잡히지 않아 추종을 켤 수 없습니다.' : '';
+  document.getElementById('manualwarn').textContent = rcOwned
+    ? 'RC가 조종 중입니다 — 웹 주행이 막혀 있습니다.'
+    : (state.mode === 'manual' ? '' : '수동 모드일 때만 주행 명령이 전달됩니다.');
+}
+
+// --- RC 전권 잠금: 주행 패드/키보드, 컨베이어, 솔레노이드를 한 번에
+// disabled 처리한다(모드 버튼은 renderModes()가 이미 처리). RC 전권으로
+// "새로 진입하는 순간"엔 웹이 쥐고 있던 주행/컨베이어 입력을 0으로
+// 리셋해 둔다 — 그래야 나중에 웹이 전권을 되찾았을 때 눌러뒀던 옛날 값이
+// 갑자기 다시 나가지 않는다(TODO.md 21번).
+let wasRcOwned = false;
+function renderLocks() {
+  const locked = rcOwns();
+  if (locked && !wasRcOwned) {
+    held = null;
+    rollerHeld = 0;
+    rollerSlider.value = 0;
+    rollerValue.textContent = '0%';
+  }
+  wasRcOwned = locked;
+
+  document.querySelectorAll('.pad button').forEach(b => b.disabled = locked);
+  speedSlider.disabled = locked;
+
+  if (state.has_roller) {
+    rollerSlider.disabled = locked;
+    document.querySelectorAll('#rollerpanel [data-roller]').forEach(b => b.disabled = locked);
+  }
+  document.getElementById('rollerwarn').textContent =
+    (locked && state.has_roller) ? 'RC가 조종 중입니다 — 웹 컨베이어 조작이 막혀 있습니다.' : '';
+
+  if (state.has_solenoid) {
+    document.getElementById('solenoidLockBtn').disabled = locked;
+    document.getElementById('solenoidUnlockBtn').disabled = locked;
+  }
+  document.getElementById('solenoidwarn').textContent =
+    (locked && state.has_solenoid) ? 'RC가 조종 중입니다 — 웹 솔레노이드 조작이 막혀 있습니다.' : '';
+}
+
+// --- 조종 방식(웹/RC) 토글: rc_bridge가 rc/status.enabled로 실제 반영
+// 여부를 알려주므로 그 값을 그대로 반영한다(3축 오버레이 토글과 같은
+// 낙관적 반영 패턴).
+let rcPending = null;
+function renderRc() {
+  const panel = document.getElementById('rcpanel');
+  if (!state.has_rc) { panel.style.display = 'none'; return; }
+  panel.style.display = '';
+  if (rcPending !== null && !!state.rc_enabled === rcPending) rcPending = null;
+  const enabled = rcPending !== null ? rcPending : !!state.rc_enabled;
+  const detail = enabled
+    ? ` (2호기 선택: ${state.rc_robot_selected ? 'O' : 'X'} · 재생: ${state.rc_run_active ? 'O' : 'X'})`
+    : '';
+  document.getElementById('rctoggle').innerHTML =
+    `<button id="rcBtn" class="${enabled ? 'active' : ''}">
+       ${enabled ? 'RC 조종기 사용 중' : '웹 조작 중'}${detail}</button>`;
+  document.getElementById('rcBtn').onclick = async () => {
+    rcPending = !enabled;
+    renderRc();
+    await post('rc/enabled', {enabled: rcPending});
+  };
+}
+
+// --- ArUco 3축 좌표계 오버레이 토글: 서버(marker_vision)가 실제 켜짐/꺼짐
+// 상태를 marker/status.axes_enabled로 알려주므로 그 값을 그대로 반영한다
+// (버튼 자체는 낙관적으로 즉시 누른 값을 반영하고, 다음 refresh에서 서버
+// 값으로 맞춰진다).
+let axesPending = null;
+function renderCamera() {
+  const tools = document.getElementById('camtools');
+  const hint = document.getElementById('axeshint');
+  if (!state.has_marker_axes) { tools.innerHTML = ''; hint.style.display = 'none'; return; }
+  const markerFeed = state.feeds && state.feeds.marker;
+  const marker = markerFeed && typeof markerFeed.data === 'object' ? markerFeed.data : {};
+  if (axesPending !== null && !!marker.axes_enabled === axesPending) axesPending = null;
+  const enabled = axesPending !== null ? axesPending : !!marker.axes_enabled;
+  hint.style.display = '';
+  tools.innerHTML = `<button id="axesBtn" class="${enabled ? 'active' : ''}">
+      3축 좌표계 표시 ${enabled ? 'ON' : 'OFF'}</button>`;
+  document.getElementById('axesBtn').onclick = async () => {
+    axesPending = !enabled;
+    renderCamera();
+    await post('marker/axes', {enabled: axesPending});
+  };
+}
+
+function renderMission() {
+  const panel = document.getElementById('missionpanel');
+  if (!state.has_mission) { panel.style.display = 'none'; return; }
+  panel.style.display = '';
+  const actions = ['approach', 'load', 'hold', 'release', 'stop', 'idle'];
+  document.getElementById('mission').innerHTML = actions.map(a =>
+    `<button data-action="${a}" ${state.mode === 'auto' ? '' : 'disabled'}
+       class="${state.action === a ? 'active' : ''}">${a}</button>`).join('');
+  document.querySelectorAll('[data-action]').forEach(btn => {
+    btn.onclick = () => post('mission',
+      btn.dataset.action === 'load' ? {action: 'load', roller: 0.8}
+                                    : {action: btn.dataset.action});
+  });
+}
+
+function renderStatus() {
+  const imuFeed = state.feeds && state.feeds.imu;
+  const imu = imuFeed && typeof imuFeed.data === 'object' ? imuFeed.data : {};
+  const imuFresh = imuFeed && imuFeed.age <= 2.0;
+  const markerFeed = state.feeds && state.feeds.marker;
+  const marker = markerFeed && typeof markerFeed.data === 'object' ? markerFeed.data : {};
+  const markerFresh = markerFeed && markerFeed.age <= 1.2;
+  const angle = value => Number.isFinite(Number(value))
+    ? `${Number(value).toFixed(2)}°` : '-';
+  const rows = [
+    ['ROS 노드', state.online ? '온라인' : '응답 없음'],
+    ['모터', state.motor_online ? '응답 수신' : '미실행/미수신'],
+    ['모드', LABEL[state.mode] || state.mode || '-'],
+    ['계절', state.season || '-'],
+    ['주행 소스', state.source || '없음'],
+    ['임무 단계', state.phase || '-'],
+    ['현재 명령', state.action || '-'],
+    ['카메라', state.camera_age === null ? '없음' :
+      `${state.camera_age}s 전 · ${state.camera_source === 'aruco' ? 'ArUco 표시' : '원본'}`],
+  ];
+  if (imu.ready && imuFresh) {
+    rows.push(
+      ['IMU', '정상'],
+      ['Roll', angle(imu.roll_deg)],
+      ['Pitch', angle(imu.pitch_deg)],
+      ['Yaw', angle(imu.yaw_deg)]);
+  } else {
+    rows.push(['IMU', imu.error || (imuFeed ? '수신 지연' : '미수신')]);
+  }
+  if (state.modes.includes('follow')) {
+    const ids = Array.isArray(marker.detected_ids) ? marker.detected_ids.join(', ') : '';
+    rows.push(['ArUco', markerFresh && marker.detected ? `ID ${ids}` :
+      (markerFresh ? '마커 없음' : '미수신')]);
+    if (markerFresh && marker.detected) {
+      rows.push(
+        ['마커 중심', `X ${Number(marker.center_x_px).toFixed(1)} px · Y ${Number(marker.center_y_px).toFixed(1)} px`],
+        ['중심 오차', `${Number(marker.offset_x_px).toFixed(1)} px`],
+        ['마커 크기', `${Number(marker.side_px).toFixed(1)} px`],
+        ['거리/3D 자세', marker.pose_available ? '사용 가능' : '미보정 · 사용 금지']);
+      // pose(solvePnP)가 켜져 있을 때만 x_mm/y_mm/z_mm/roll·pitch·yaw가
+      // marker/status에 실려 온다 — base/marker_vision.md 참고.
+      if (marker.pose_available && Number.isFinite(Number(marker.z_mm))) {
+        rows.push(
+          ['X (좌우, mm)', Number(marker.x_mm).toFixed(1)],
+          ['Y (상하, mm)', Number(marker.y_mm).toFixed(1)],
+          ['Z (거리, mm)', Number(marker.z_mm).toFixed(1)],
+          ['Roll', angle(marker.roll_deg)],
+          ['Pitch', angle(marker.pitch_deg)],
+          ['Yaw', angle(marker.yaw_deg)]);
+      }
+    }
+  }
+  if (state.modes.includes('follow'))
+    rows.push(['1호기 링크', state.follow_available ? '수신 중' : '두절']);
+  if (state.modes.includes('rc'))
+    rows.push(['RC 링크(1호기 경유)', state.rc_available ? '수신 중' : '두절']);
+  if (state.has_estop)
+    rows.push(['비상 정지', state.emergency_stop ? '걸림' : '해제'],
+              ['통신 안전 정지', state.safety_stop ? '걸림' : '해제']);
+  if (state.has_solenoid) {
+    const couplingFeed = state.feeds && state.feeds.coupling;
+    const coupling = couplingFeed && typeof couplingFeed.data === 'object' ? couplingFeed.data : {};
+    rows.push(['솔레노이드', coupling.solenoid_locked ? '잠김' : '풀림']);
+  }
+  if (state.has_roller) {
+    const cargoFeed = state.feeds && state.feeds.cargo;
+    const cargo = cargoFeed && typeof cargoFeed.data === 'object' ? cargoFeed.data : {};
+    rows.push(['컨베이어', cargo.roller_manual_active
+      ? `수동 ${Number(cargo.roller ?? 0).toFixed(2)}`
+      : `자동/정지 ${Number(cargo.roller ?? 0).toFixed(2)}`]);
+  }
+  document.getElementById('status').innerHTML = rows.map(
+    ([k, v]) => `<div class="row"><span>${k}</span><b>${v}</b></div>`).join('');
+}
+
+async function refresh() {
+  try { state = await (await fetch(`/api/unit/${UNIT}`)).json(); }
+  catch (e) { return; }
+  document.getElementById('dot').className = 'dot' + (state.online ? ' on' : '');
+  document.getElementById('headline').textContent =
+    state.online ? '' : '노드가 보이지 않습니다 — launch 와 ROS_DOMAIN_ID 를 확인하십시오.';
+  document.getElementById('estoppanel').style.display =
+    state.has_estop ? '' : 'none';
+  document.getElementById('rollerpanel').style.display =
+    state.has_roller ? '' : 'none';
+  document.getElementById('solenoidpanel').style.display =
+    state.has_solenoid ? '' : 'none';
+  renderModes(); renderMission(); renderStatus(); renderCamera(); renderRc(); renderLocks();
+}
+
+refresh();
+setInterval(refresh, 500);
+</script>
+</body>
+</html>

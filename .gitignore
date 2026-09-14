@@ -1,3 +1,16 @@
+build/
+install/
+log/
+*.tar.gz
+__pycache__/
+*.pyc
+# 병합 충돌 백업
+*.orig
+# calibrate_camera 결과물 — 검토 후 수동으로 marker.yaml에 옮겨 적는 용도라
+# 이 파일 자체는 커밋하지 않는다 (docs/base/calibrate_camera.md 참고).
+src/base/config/camera_calib.yaml
+
+# --- GitHub 기본 템플릿 (C++) ---
 # Prerequisites
 *.d
 

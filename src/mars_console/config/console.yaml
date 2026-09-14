@@ -1,0 +1,17 @@
+# 운용 콘솔. 로봇이 아니라 운용 PC에서 띄운다.
+#   export ROS_DOMAIN_ID=10
+#   ros2 run mars_console console --ros-args --params-file <이 파일>
+/**/mars_console:
+  ros__parameters:
+    host: 0.0.0.0
+    port: 5100
+    # 브라우저 조작이 이 시간 끊기면 수동 속도를 0으로 만든다.
+    # 창을 닫거나 Wi-Fi가 끊겼을 때 마지막 속도로 계속 가는 것을 막는다.
+    input_timeout: 0.4
+    # UI 화면에서 낼 수 있는 최대 속도. 호기 쪽 상한과 별개로 한 번 더 깎는다.
+    # 2026-08-28: 사용자 요청으로 기존 실효 최대치(0.10/0.10)의 2배로 올림
+    # — unit.html의 버튼/키보드 기본 배율도 이 값에 맞춰 같이 올렸다.
+    max_linear: 0.20
+    max_angular: 0.20
+    # motor/status 가 이 시간 없으면 '응답 없음'으로 본다.
+    stale_seconds: 2.0

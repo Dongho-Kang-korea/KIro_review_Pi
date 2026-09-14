@@ -1,0 +1,9 @@
+/**/fleet_follower:
+  ros__parameters:
+    unit: 2
+    status_rate_hz: 5.0
+    # protocol.py의 CMD_TIMEOUT_S(v1.2, 2.5)와 맞춘다. 1호기 leader의
+    # 명령 재발행이 1Hz라 1.0초는 정상 동작 중에도 아슬아슬하게 걸린다
+    # (TODO.md 18번, 2026-08-31).
+    command_timeout_s: 2.5
+    state_timeout_s: 2.5

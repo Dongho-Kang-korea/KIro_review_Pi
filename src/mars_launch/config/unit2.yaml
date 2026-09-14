@@ -1,0 +1,4 @@
+# 이 파일은 호기 전체에서 공유되는 식별값만 둔다.
+# 하드웨어 파라미터는 base/config, 임무 튜닝값은 mission/config가 소유한다.
+unit: 2
+ros_domain_id: 10

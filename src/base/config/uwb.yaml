@@ -1,0 +1,11 @@
+/**/uwb:
+  ros__parameters:
+    enabled: true         # 2026-08-29 태그(DW4823)+앵커(DWD00C) 실측 확인
+    # ttyACM 번호는 재부팅 순서에 따라 바뀔 수 있으므로 장치 고유 경로를 쓴다.
+    port: '/dev/serial/by-id/usb-SEGGER_J-Link_000760046619-if00'
+    baudrate: 115200
+    publish_rate: 10.0
+    shell_enter_delay_s: 0.2
+    data_timeout_s: 3.0
+    reconnect_interval_s: 2.0
+    offset_mm: 0.0        # 정확한 기준 거리 대비 보정은 아직 — 육안 확인만 됨(TODO.md 1번)

@@ -1,0 +1,62 @@
+# 노드가 /unit2 네임스페이스 아래 뜨므로 '/**/이름'으로
+# 매칭한다. 'fleet_rc_bridge:'로 두면 안 맞아 코드 기본값이 조용히 쓰인다.
+#
+# 채널 배치·임계값은 2026-08-30 1호기 쪽 합의안을 그대로 반영한 것이지
+# 실물로 확인된 값은 아니다 — rc_bridge.py 상단 docstring의 채널표와
+# TODO.md 14번 참고. 배선 후 raw 채널 값(rc/status)부터 확인할 것.
+/**/fleet_rc_bridge:
+  ros__parameters:
+    unit: 2
+    # 1호기가 /receiver/channels로 직접 방송한다(호기별로 안 나뉨).
+    # 비워두면 fleet/protocol.py의 TOPIC_RECEIVER_CHANNELS를 쓴다.
+    topic: ''
+    channel_count: 14
+    pwm_min: 1000.0
+    pwm_max: 2000.0
+    # 중립(1500 부근) 근처 떨림을 무시하는 폭(마이크로초) — CH1/CH2에만 적용.
+    deadband_us: 20.0
+
+    # CH1/CH2 — 주행. 1-indexed(CH1/CH2...). 방향은 실측 전 추정값.
+    steering_channel: 1
+    throttle_channel: 2
+    steering_reversed: false
+    throttle_reversed: false
+
+    # CH3 — 원래 1호기 카메라 틸트 채널을 2호기는 솔레노이드로 재사용.
+    # 중앙값(1500) 임계 — 스틱 내리면 잠금, 올리면 해제(추정, 반전 가능).
+    solenoid_channel: 3
+    solenoid_reversed: false
+
+    # CH5(VRA) — 속도 스케일 노브. 1호기 knob_scale()과 동일(선형,
+    # 데드존 없음, 1000->0.0/2000->1.0).
+    speed_scale_channel: 5
+
+    # CH7 — 호기 선택. 이 값 이상이어야 "2호기"로 인정(그 미만은 중간
+    # 구간 포함 전부 "2호기 아님" — 안전 쪽으로 편향).
+    robot_select_channel: 7
+    robot_select_threshold: 1650.0
+
+    # CH8 — 정지/재생. 이 값 이상이어야 "재생"(그 미만은 정지로 취급).
+    stop_channel: 8
+    run_threshold: 1650.0
+
+    # CH9 — 컨베이어 3단 스위치(고정 풀파워, 아날로그 아님).
+    conveyor_channel: 9
+    conveyor_low_threshold: 1250.0
+    conveyor_high_threshold: 1750.0
+
+    # CH10 — 자동/수동. 이 값 이상이면 2호기를 auto로, 아니면 rc로
+    # 원격 전환한다(drive/mode_cmd) — CH7이 2호기를 가리킬 때만 적용.
+    mode_channel: 10
+    mode_auto_threshold: 1500.0
+
+    # manual(키보드) 상한과 동일하게 시작 — VRA 스케일(0~1)이 곱해지므로
+    # 이게 최고 속도다.
+    max_linear: 0.30
+    max_angular: 0.50
+
+    # 이 시간 안에 새 채널 프레임이 안 오면 "수신기 연결 끊김"으로 보고
+    # 솔레노이드를 강제 잠금으로 되돌린다(주행/컨베이어는 각자 자체
+    # timeout이 있어 이 값과 무관하게 알아서 0이 된다).
+    signal_timeout_s: 1.0
+    solenoid_failsafe_lock_on_timeout: true

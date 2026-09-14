@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MARS 운용 콘솔</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 32px 20px; background: #0e1116; color: #e6edf3;
+         font: 16px/1.5 system-ui, "Noto Sans KR", sans-serif; }
+  h1 { margin: 0 0 4px; font-size: 26px; letter-spacing: -0.02em; }
+  .sub { color: #8b949e; margin-bottom: 28px; font-size: 14px; }
+  .grid { display: grid; gap: 16px; max-width: 900px;
+          grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+  .card { display: block; text-decoration: none; color: inherit; padding: 22px;
+          border: 1px solid #2a313c; border-radius: 12px; background: #161b22;
+          transition: border-color .15s, transform .15s; }
+  .card:hover { border-color: #4b93ff; transform: translateY(-2px); }
+  .card.off { opacity: .55; }
+  .name { font-size: 22px; font-weight: 650; margin-bottom: 12px; }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%;
+         margin-right: 8px; background: #6e7681; vertical-align: middle; }
+  .dot.on { background: #3fb950; box-shadow: 0 0 8px #3fb95088; }
+  .row { display: flex; justify-content: space-between; font-size: 14px;
+         color: #8b949e; padding: 3px 0; }
+  .row b { color: #e6edf3; font-weight: 500; }
+  .modes { margin-top: 14px; font-size: 12px; color: #6e7681; }
+</style>
+</head>
+<body>
+  <h1>MARS 운용 콘솔</h1>
+  <div class="sub">조종할 호기를 고르십시오.</div>
+  <div class="grid" id="grid"></div>
+
+<script>
+const LABEL = { manual: '수동', auto: '자동', follow: '추종', idle: '대기' };
+
+async function refresh() {
+  let units;
+  try { units = await (await fetch('/api/units')).json(); }
+  catch (e) { return; }
+
+  document.getElementById('grid').innerHTML = units.map(u => `
+    <a class="card ${u.online ? '' : 'off'}" href="/unit/${u.unit}">
+      <div class="name"><span class="dot ${u.online ? 'on' : ''}"></span>${u.name}</div>
+      <div class="row"><span>상태</span><b>${u.online ? '온라인' : '응답 없음'}</b></div>
+      <div class="row"><span>모드</span><b>${LABEL[u.mode] || u.mode || '-'}</b></div>
+      <div class="row"><span>계절</span><b>${u.season || '-'}</b></div>
+      ${u.modes.includes('follow')
+        ? `<div class="row"><span>추종 가능</span><b>${u.follow_available ? '예' : '아니오 (1호기 없음)'}</b></div>`
+        : ''}
+      <div class="modes">${u.modes.map(m => LABEL[m] || m).join(' · ')}</div>
+    </a>`).join('');
+}
+
+refresh();
+setInterval(refresh, 1000);
+</script>
+</body>
+</html>

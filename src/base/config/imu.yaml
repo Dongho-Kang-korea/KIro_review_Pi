@@ -1,0 +1,12 @@
+/**/imu:
+  ros__parameters:
+    enabled: true
+    # 전 담당자 실기 성공값: /dev/i2c-1의 BNO086 주소 0x4B (=75)
+    i2c_address: 75
+    reconnect_interval_s: 1.0
+    publish_rate: 20.0
+    heading_offset_deg: 0.0
+    # false = 지자기 제외(GAME_ROTATION_VECTOR). 절대 북쪽을 포기하는 대신
+    # 상대 회전이 지자기 재수렴에 흔들리지 않는다. 탱크턴 각도 제어가
+    # 주 용도라 이쪽을 쓴다. 절대 방위가 필요해지면 true 로 되돌릴 것.
+    use_magnetometer: false

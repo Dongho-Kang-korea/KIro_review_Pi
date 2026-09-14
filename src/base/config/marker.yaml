@@ -1,0 +1,61 @@
+/**/marker_vision:
+  ros__parameters:
+    enabled: true
+    detection_timeout_s: 0.6
+    # 원본 30fps 검출을 최근 0.35초 슬라이딩 윈도우로 판단한다.
+    # 처음 검출은 4회 이상 + 성공률 60%면 확정한다.
+    # 이미 검출 중이면 최근 6표본 이상에서 실패율 80% 이상이면서 마지막
+    # 성공 이후 0.25초가 지나야 미검출로 전환한다. 한두 프레임 실패나
+    # 성공/실패가 교차하는 상황은 마커 소실로 처리하지 않는다.
+    decision_window_s: 0.35
+    acquire_min_hits: 4
+    acquire_hit_ratio: 0.60
+    lost_min_samples: 6
+    lost_miss_ratio: 0.80
+    lost_confirm_s: 0.25
+    status_rate_hz: 20.0
+    # 일반 검출 실패 프레임만 국부 대비 보정 후 한 번 더 검출한다.
+    clahe_fallback: true
+    # CLAHE 로도 검출이 안 되는 프레임을 전역 equalizeHist 로 한 번 더
+    # 시도한다. 2026-09-01 실측에서 이것만 통과한 프레임이 있었다.
+    equalize_fallback: true
+    # 기본 경로가 거의 항상 실패하는 조명이면 true 로 올린다. 폴백이
+    # 상시 경로가 되면 프레임마다 검출을 3번 돌아 CPU 를 3배 쓴다.
+    equalize_primary: true
+    dictionary: DICT_4X4_50
+    allowed_ids_json: '[1,2,3]'
+    # -1은 화면에서 가장 크게 보이는 허용 ID를 선택한다. 1호기 뒤
+    # ArUco가 ID 1로 확정됐고(2026-08-30) 지금은 물리 마커가 1개뿐이라
+    # -1도 안전하지만(자매 저장소 mars1-rokacup26/ros2_ws TODO
+    # 12번 결론), 다른 호기용 마커가 나중에 실제로 추가되면 -1은 화면에
+    # 순간 더 크게 잡히는 엉뚱한 마커를 따라갈 위험이 생긴다 — 그래서
+    # 방어적으로 1로 고정해 둔다(2026-08-31, TODO.md 17번).
+    target_id: 1
+    marker_size_mm: 40.0
+    plate_size_mm: 45.0
+    border_bits: 1
+    min_side_px: 20.0
+    jpeg_quality: 82
+    # 확정(2026-08-28). 체커보드(노트북 화면)로 카메라 1280x720에서
+    # 캘리브레이션(20장, 20cm~1m 여러 거리, 재투영 오차 0.022px), 60cm
+    # 실측 검증까지 통과. x/y/roll/pitch/yaw는 안정적(표준편차 각각
+    # 수 mm/수 도 이내, roll은 원형 통계로 5.4도)이고 z(거리)만 먼
+    # 거리일수록 잡음이 커진다(60cm에서 표준편차 42mm, 약 7%) — 마커가
+    # 화면에서 차지하는 픽셀이 줄어드는 만큼 자연스러운 현상이다.
+    # 이전 640x360/ArUco 단일 마커 시도들은 실측 검증에서 오차가 커서
+    # 폐기했다 — 자세한 시행착오는 docs/base/marker_vision.md 참고.
+    camera_matrix_json: '[[1453.4769369588257,0.0,653.9934640875838],[0.0,1454.350130030249,341.58928126679837],[0.0,0.0,1.0]]'
+    dist_coeffs_json: '[0.04946205745079547,-0.08991094240385306,-0.0022004167584359774,0.005289582279442205,0.9219427552519384]'
+    calibration_width: 1280
+    calibration_height: 720
+    # 2026-08-29: 웹 콘솔 카메라 딜레이 완화. 검출/pose는 위 calibration_*
+    # 해상도(1280x720) 그대로 계산하고, vision/image/compressed로 나가는
+    # 주석 프레임만 이 크기로 줄여 인코드한다 -- 브라우저까지 가는 JPEG
+    # 용량만 줄고 인식 정확도는 그대로다. 0으로 두면(비활성) 원본 그대로
+    # 나간다.
+    stream_width: 640
+    stream_height: 360
+    # 3축(X/Y/Z) 좌표계 오버레이 초기값 -- 기본 꺼짐(실시간성 우선).
+    # 웹 콘솔의 토글 버튼(marker/axes_enable)으로 실행 중에 켤 수 있다.
+    draw_axes: false
+    axes_length_mm: 30.0

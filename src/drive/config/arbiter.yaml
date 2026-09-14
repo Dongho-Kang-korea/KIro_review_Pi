@@ -1,0 +1,33 @@
+# 노드가 /unit2 네임스페이스 아래에 뜨므로 '/**/이름' 으로 매칭한다.
+# 'arbiter:' 로 두면 /unit2/arbiter 와 안 맞아 코드 기본값이 조용히 쓰인다.
+/**/arbiter:
+  ros__parameters:
+    publish_rate_hz: 50.0
+    source_timeout_s: 0.5
+    # 시작 모드는 항상 idle 이다. 운용 UI 가 올려준다.
+    # manual.launch.py 만 launch 인자로 manual 을 덮어쓴다.
+    start_mode: idle
+    # 계절은 launch 인자로 고정한다 (구간별 독립 heat). 여기 값은 기본값일 뿐
+    # robot.launch.py 의 season 인자가 덮어쓴다. 2호기는 여름에만 자체 미션이
+    # 있고 나머지는 전부 추종이라, 이 값은 UI 표시와 기록용이다.
+    season: summer
+    # 추종 중 /fleet/state 가 이 시간 끊기면 스스로 idle 로 내려온다.
+    # 규약 문서 11장의 2.5초와 같은 값이다. 바꾸려면 규약을 먼저 고칠 것.
+    fleet_state_timeout_s: 2.5
+
+/**/manual:
+  ros__parameters:
+    # 키보드 텔레오퍼레이션. ros2 run 으로 띄우면 이 파일이 실리지 않으므로
+    # 같은 값이 drive/manual.py 의 declare_parameter 기본값에도 들어 있다.
+    # 한쪽만 고치면 실행 방법에 따라 값이 달라진다 — 두 곳을 함께 고칠 것.
+    linear_step: 0.05
+    angular_step: 0.1
+    max_linear: 0.30
+    max_angular: 0.50
+    repeat_rate_hz: 20.0
+
+/**/test_console:
+  ros__parameters:
+    unit: 2
+    host: 0.0.0.0
+    port: 5000
