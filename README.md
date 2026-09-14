@@ -265,19 +265,24 @@ flowchart LR
 
 ```mermaid
 stateDiagram-v2
+    direction LR
     [*] --> idle
     idle --> turning: approach
-    turning --> approach: IMU로 180° 회전 완료
-    approach --> contact: UWB 근접 + 1호기 접촉 판정 3회 연속
-    contact --> loading: load (롤러 값 동반)
-    loading --> loaded: 주행 전류 high 상승 후 low 하락 유지<br/>또는 1호기 하락 판정
-    loading --> error: 시간 초과 / 전류 끊김 / 안전 정지
+    turning --> approach: 180° 회전
+    approach --> contact: 접촉 확인
+    contact --> loading: load
+    loading --> loaded: 전류 판정
+    loading --> error: 실패
     loaded --> idle: hold
 ```
 
+- **회전**: `approach`를 받으면 IMU 방위각으로 180° 돌아 물자 쪽을 등진다.
+- **접촉 확인**: UWB 거리가 가깝고, 1호기가 자기 전류로 판정한 접촉 결과가 3번 연속 오면 `contact`.
 - **적재 중**: 저속 후진으로 물자를 밀면서 롤러를 돌린다.
+- **실패**: 시간 초과, 전류 값 끊김, 안전 정지 중 하나면 `error`.
 - **완료 판정**: 주행 모터(ID 1·2) 전류가 `unit2_load_high_current_a` 이상으로
-  올랐다가 `unit2_load_low_current_a` 아래로 떨어져 유지되면 완료. 롤러 전류는 쓰지 않는다.
+  올랐다가 `unit2_load_low_current_a` 아래로 떨어져 유지되면 완료. 1호기가 자기 전류로
+  하락을 판정해 보내 줘도 완료로 본다. 롤러 전류는 쓰지 않는다.
 - **적색 검출**: 카메라 영상에서 HSV 적색 영역을 5Hz로 찾아 `cargo/red_detected`로 알린다.
 - **수동 컨베이어**: 미션이 멈춰 있을 때는 웹·RC의 컨베이어 입력(`roller_manual_cmd`)을 받는다.
 
@@ -287,17 +292,17 @@ stateDiagram-v2
 
 ```mermaid
 stateDiagram-v2
+    direction LR
     [*] --> ready
-    ready --> align: start / couple
-    align --> contact: 방위각이 허용치 안에 새 표본 연속 N개
-    contact --> contact: 마커 보이는 동안 조향하며 감속 접근
-    contact --> blind: 가까워져 마커가 화면에서 사라짐
-    blind --> locking: 주행 전류가 접촉 기준 이상 유지
-    contact --> locking: 주행 전류가 접촉 기준 이상 유지
-    locking --> verify_pull: 솔레노이드 잠김 확인
-    verify_pull --> locked: 후진하며 당김 전류가 기준 이상 연속
-    verify_pull --> align: 실패 → 풀지 않고 재결합 (최대 3회)
-    blind --> align: 거리·시간 한도 초과 → 마커 재검출 후 재시도
+    ready --> align: start
+    align --> contact: 정렬 완료
+    contact --> blind: 마커 사라짐
+    contact --> locking: 전류 접촉
+    blind --> locking: 전류 접촉
+    blind --> align: 한도 초과
+    locking --> verify_pull: 잠김
+    verify_pull --> locked: 당김 확인
+    verify_pull --> align: 실패
     locked --> [*]
 ```
 
